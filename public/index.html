@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Websiter — ИИ-конструктор сайтов</title>
+<meta name="description" content="Выберите дизайн, расскажите о своём бизнесе — ИИ проанализирует его, напишет тексты и соберёт готовый сайт.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%235b4df5'/%3E%3Cstop offset='1' stop-color='%23a145f5'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='9' fill='url(%23g)'/%3E%3Cpath d='m16 7 2.2 6.3L24.5 15.5l-6.3 2.2L16 24l-2.2-6.3L7.5 15.5l6.3-2.200z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap&subset=cyrillic,latin">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="logo" href="/" aria-label="Websiter">
+      <span class="logo-mark"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></span>
+      Websiter
+    </a>
+    <nav class="topnav">
+      <a href="#how">Как это работает</a>
+      <a class="btn btn-primary btn-sm" href="#builder" data-action="start">Создать сайт</a>
+    </nav>
+  </div>
+</header>
+
+<div id="demo-banner" class="demo-banner" hidden>
+  <div class="wrap">
+    <b>Демо-режим.</b> ИИ пока не подключён — сайты собираются из встроенных заготовок. Добавьте <code>ANTHROPIC_API_KEY</code> на сервере, чтобы тексты писал ИИ.
+  </div>
+</div>
+
+<main>
+  <section class="hero" id="top">
+    <div class="wrap hero-in">
+      <span class="pill">ИИ-конструктор сайтов</span>
+      <h1>Сайт для вашего бизнеса —<br><span class="grad">за пару минут</span></h1>
+      <p class="hero-lead">Выберите дизайн и расскажите о бизнесе. ИИ проанализирует его, напишет тексты, подберёт цвета и соберёт готовый сайт, который можно сразу показать клиентам.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary btn-lg" href="#builder" data-action="start">Создать сайт
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <a class="btn btn-ghost btn-lg" href="#how">Как это работает</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="builder" id="builder" aria-label="Конструктор">
+    <div class="wrap">
+
+      <ol class="stepper" id="stepper" aria-label="Шаги">
+        <li data-s="design" class="current"><span class="n">1</span><span class="t">Дизайн</span></li>
+        <li data-s="about"><span class="n">2</span><span class="t">О бизнесе</span></li>
+        <li data-s="result"><span class="n">3</span><span class="t">Ваш сайт</span></li>
+      </ol>
+
+      <!-- Шаг 1: выбор дизайна -->
+      <section class="panel" data-panel="design">
+        <div class="panel-head">
+          <h2>Выберите дизайн</h2>
+          <p>Это только оформление. Тексты и цвета ИИ подберёт под ваш бизнес — а дизайн потом можно будет сменить в один клик.</p>
+        </div>
+        <div class="themes" id="themes" role="radiogroup" aria-label="Дизайн сайта"></div>
+        <div class="panel-foot">
+          <span class="muted" id="design-hint">Выберите один из вариантов</span>
+          <button class="btn btn-primary btn-lg" id="to-about" type="button" disabled>Дальше — о бизнесе
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- Шаг 2: описание бизнеса -->
+      <section class="panel" data-panel="about" hidden>
+        <div class="panel-head">
+          <h2>Расскажите о своём бизнесе</h2>
+          <p>Чем подробнее — тем точнее получится сайт. Пишите как есть, своими словами: ИИ сам выделит главное.</p>
+          <div class="chosen" id="chosen-design"></div>
+        </div>
+
+        <form id="about-form" class="form" novalidate>
+          <div class="grid2">
+            <label class="field">
+              <span class="lbl">Название <i>*</i></span>
+              <input name="name" maxlength="80" autocomplete="organization" placeholder="Например, Кофейня «Зерно»" required>
+            </label>
+            <label class="field">
+              <span class="lbl">Город</span>
+              <input name="city" maxlength="80" autocomplete="address-level2" placeholder="Где вы работаете">
+            </label>
+          </div>
+
+          <label class="field">
+            <span class="lbl">Чем занимается ваш бизнес? <i>*</i></span>
+            <textarea name="description" rows="6" maxlength="2000" placeholder="Что вы делаете или продаёте, для кого, чем отличаетесь, какие есть услуги и цены, как давно работаете…" required></textarea>
+            <span class="field-foot">
+              <span class="examples">Не знаете, что писать? Попробуйте пример:
+                <button type="button" class="chip" data-example="coffee">Кофейня</button>
+                <button type="button" class="chip" data-example="barber">Барбершоп</button>
+                <button type="button" class="chip" data-example="lawyer">Юрист</button>
+                <button type="button" class="chip" data-example="yoga">Студия йоги</button>
+              </span>
+              <span class="count" id="desc-count">0 / 2000</span>
+            </span>
+          </label>
+
+          <div class="grid3">
+            <label class="field">
+              <span class="lbl">Главная цель сайта</span>
+              <select name="goal">
+                <option value="leads">Получать заявки и звонки</option>
+                <option value="bookings">Записывать клиентов</option>
+                <option value="sales">Продавать товары и услуги</option>
+                <option value="info">Рассказать о компании</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="lbl">Тон общения</span>
+              <select name="tone">
+                <option value="auto">Подберёт ИИ</option>
+                <option value="friendly">Дружелюбный</option>
+                <option value="business">Деловой</option>
+                <option value="premium">Премиальный</option>
+                <option value="bold">Дерзкий, энергичный</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="lbl">Язык сайта</span>
+              <select name="language">
+                <option value="auto">Как в описании</option>
+                <option value="ru">Русский</option>
+                <option value="en">English</option>
+                <option value="uk">Українська</option>
+                <option value="de">Deutsch</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+              </select>
+            </label>
+          </div>
+
+          <details class="more">
+            <summary>Контакты для сайта <span class="muted">— по желанию</span></summary>
+            <p class="muted small">Покажем их в блоке «Контакты». ИИ ничего не придумывает сам: если контактов нет — блок будет без них.</p>
+            <div class="grid2">
+              <label class="field"><span class="lbl">Телефон</span><input name="phone" maxlength="40" type="tel" autocomplete="tel" placeholder="+7 900 000-00-00"></label>
+              <label class="field"><span class="lbl">Email</span><input name="email" maxlength="120" type="email" autocomplete="email" placeholder="hello@example.com"></label>
+              <label class="field"><span class="lbl">Адрес</span><input name="address" maxlength="160" autocomplete="street-address" placeholder="Улица, дом"></label>
+              <label class="field"><span class="lbl">Часы работы</span><input name="hours" maxlength="120" placeholder="Пн–Пт, 9:00–20:00"></label>
+            </div>
+          </details>
+
+          <p class="form-error" id="form-error" role="alert" hidden></p>
+
+          <div class="panel-foot">
+            <button class="btn btn-ghost" id="back-design" type="button">← Назад</button>
+            <button class="btn btn-primary btn-lg" type="submit">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>
+              Собрать сайт
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Генерация -->
+      <section class="panel work" data-panel="work" hidden aria-live="polite">
+        <div class="orb" aria-hidden="true"></div>
+        <h2 id="work-title">ИИ собирает ваш сайт</h2>
+        <p class="muted" id="work-sub">Обычно это занимает меньше минуты. Не закрывайте вкладку.</p>
+        <ul class="stages" id="stages">
+          <li data-stage="analyzing"><span class="dot"></span><span><b>Анализирую бизнес</b><small>Ниша, аудитория, сильные стороны</small></span></li>
+          <li data-stage="writing"><span class="dot"></span><span><b>Пишу тексты и структуру</b><small>Заголовки, услуги, вопросы, цвета</small></span></li>
+          <li data-stage="building"><span class="dot"></span><span><b>Собираю страницу</b><small>Применяю выбранный дизайн</small></span></li>
+        </ul>
+        <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div id="bar-fill"></div></div>
+        <button class="btn btn-ghost btn-sm" id="cancel-work" type="button">Отменить</button>
+      </section>
+
+      <!-- Шаг 3: результат -->
+      <section class="panel result" data-panel="result" hidden>
+        <div class="result-grid">
+          <div class="preview-col">
+            <div class="preview-bar">
+              <div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
+              <div class="url" id="preview-url">/s/…</div>
+              <div class="seg" role="group" aria-label="Размер экрана">
+                <button type="button" class="on" data-device="desktop" aria-label="Компьютер" title="Компьютер">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+                </button>
+                <button type="button" data-device="mobile" aria-label="Телефон" title="Телефон">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="preview-stage" id="preview-stage" data-device="desktop">
+              <iframe id="preview" title="Предпросмотр сайта" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"></iframe>
+              <div class="busy" id="preview-busy" hidden><div class="spin"></div><span id="busy-text">ИИ вносит правки…</span></div>
+            </div>
+          </div>
+
+          <aside class="side">
+            <div class="card ai-card">
+              <h3><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg> Что ИИ понял о вашем бизнесе</h3>
+              <dl id="analysis"></dl>
+            </div>
+
+            <div class="card">
+              <h3>Дизайн</h3>
+              <div class="mini-themes" id="mini-themes" role="radiogroup" aria-label="Сменить дизайн"></div>
+              <div class="color-row">
+                <label for="accent">Фирменный цвет</label>
+                <input type="color" id="accent" value="#2563eb">
+                <button class="link" id="accent-reset" type="button" hidden>Вернуть цвет ИИ</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Попросить ИИ изменить</h3>
+              <form id="revise-form">
+                <textarea id="revise-text" rows="3" maxlength="600" placeholder="Например: сделай тон строже, добавь вопрос про оплату, сократи тексты"></textarea>
+                <div class="chips">
+                  <button type="button" class="chip" data-revise="Сделай тексты короче и энергичнее">Короче и энергичнее</button>
+                  <button type="button" class="chip" data-revise="Сделай тон более деловым и строгим">Строже</button>
+                  <button type="button" class="chip" data-revise="Добавь больше вопросов в FAQ">Больше вопросов</button>
+                </div>
+                <p class="form-error" id="revise-error" role="alert" hidden></p>
+                <button class="btn btn-dark btn-block" type="submit" id="revise-btn">Применить правку</button>
+              </form>
+            </div>
+
+            <div class="actions">
+              <a class="btn btn-primary btn-block" id="open-site" target="_blank" rel="noopener">Открыть сайт</a>
+              <div class="grid2">
+                <a class="btn btn-ghost" id="download-site">Скачать HTML</a>
+                <button class="btn btn-ghost" id="copy-link" type="button">Копировать ссылку</button>
+              </div>
+              <button class="link center" id="new-site" type="button">Создать другой сайт</button>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+    </div>
+  </section>
+
+  <section class="how" id="how">
+    <div class="wrap">
+      <h2>Как это работает</h2>
+      <div class="how-grid">
+        <div class="how-card"><span class="n">1</span><h3>Выбираете дизайн</h3><p>Шесть готовых стилей — от строгого бизнес до тёплого и уютного. Каждый можно посмотреть вживую.</p></div>
+        <div class="how-card"><span class="n">2</span><h3>Рассказываете о бизнесе</h3><p>Пара предложений своими словами. Что делаете, для кого и чем отличаетесь.</p></div>
+        <div class="how-card"><span class="n">3</span><h3>ИИ собирает сайт</h3><p>Анализирует нишу, пишет тексты, подбирает цвета и структуру — и показывает готовый результат.</p></div>
+        <div class="how-card"><span class="n">4</span><h3>Дорабатываете и забираете</h3><p>Меняйте дизайн, цвет или просите ИИ о правках. Затем скачайте сайт или поделитесь ссылкой.</p></div>
+      </div>
+      <p class="honest">ИИ не выдумывает цены, отзывы и достижения: в тексты попадает только то, что вы сами рассказали о бизнесе.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <span>© <span id="year"></span> Websiter</span>
+    <span class="muted">Сайты создаются с помощью ИИ</span>
+  </div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script type="module" src="/app.js"></script>
+</body>
+</html>
