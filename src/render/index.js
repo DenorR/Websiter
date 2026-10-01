@@ -1,271 +1,189 @@
-import { icon } from './icons.js';
-import { THEMES, DEFAULT_THEME, BASE_CSS, fontLink, rootVars, onColor } from './themes.js';
-import { validHex } from '../schema.js';
+import { normalizeSite, resolveDesign, tokensCss } from '../model.js';
+import { baseCss } from './css-base.js';
+import { variantCss } from './css-variants.js';
+import { isLayout } from './variants.js';
+import { onColor } from '../color.js';
+import {
+  esc, plain, ctaHref, renderNav, renderMenu, renderHero, renderTicker, renderSection, renderContact, renderFooter,
+} from './parts.js';
 
-const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-export const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
+export { esc };
 
-const paragraphs = (text) =>
-  String(text ?? '')
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`)
-    .join('');
+const NAV_SKIP = new Set(['cta', 'manifesto']);
 
-const lines = (text) =>
-  String(text ?? '')
-    .split('\n')
-    .map((l) => l.replace(/^[-•*]\s*/, '').trim())
-    .filter(Boolean);
-
-const telHref = (phone) => 'tel:' + String(phone).replace(/[^\d+]/g, '');
-const sectionId = (s) => `s-${s.type}`;
-
-const iconWrap = (name, size = 24) => `<span class="ico-wrap">${icon(name, size)}</span>`;
-
-// ───────────── Секции ─────────────
-
-function renderFeatures(s) {
-  return `<div class="cards" data-n="${s.items.length}">${s.items
-    .map(
-      (it) => `<article class="card reveal">${iconWrap(it.icon)}<h3>${esc(it.title)}</h3><p>${esc(it.text)}</p></article>`,
-    )
-    .join('')}</div>`;
-}
-
-function renderAbout(s) {
-  const facts = s.items.length
-    ? `<div class="facts">${s.items
-        .map(
-          (it) =>
-            `<div class="fact reveal">${iconWrap(it.icon, 20)}<div><h3>${esc(it.title)}</h3>${
-              it.text ? `<p>${esc(it.text)}</p>` : ''
-            }</div></div>`,
-        )
-        .join('')}</div>`
-    : '';
-  return `<div class="about"><div class="about-text reveal">${paragraphs(s.text)}</div>${facts}</div>`;
-}
-
-function renderProcess(s) {
-  return `<div class="steps" data-n="${s.items.length}">${s.items
-    .map(
-      (it, i) =>
-        `<div class="step reveal"><div class="step-n">${i + 1}</div><h3>${esc(it.title)}</h3><p>${esc(it.text)}</p></div>`,
-    )
-    .join('')}</div>`;
-}
-
-function renderPricing(s, ctaLabel) {
-  return `<div class="plans">${s.items
-    .map(
-      (it) => `<article class="plan reveal"><h3>${esc(it.title)}</h3>${
-        it.meta ? `<div class="price">${esc(it.meta)}</div>` : ''
-      }<ul>${lines(it.text)
-        .map((l) => `<li>${icon('check', 18)}<span>${esc(l)}</span></li>`)
-        .join('')}</ul><a class="btn btn-primary" href="#contact">${esc(ctaLabel)}</a></article>`,
-    )
-    .join('')}</div>`;
-}
-
-function renderFaq(s) {
-  return `<div class="faq">${s.items
-    .map((it) => `<details class="reveal"><summary>${esc(it.title)}</summary><p>${esc(it.text)}</p></details>`)
-    .join('')}</div>`;
-}
-
-function renderCta(s, fallbackLabel) {
-  return `<div class="cta-band reveal"><div><h2>${esc(s.title)}</h2>${
-    s.text || s.subtitle ? `<p>${esc(s.text || s.subtitle)}</p>` : ''
-  }</div><a class="btn btn-primary" href="#contact">${esc(s.buttonLabel || fallbackLabel)}</a></div>`;
-}
-
-function renderSection(s, index, ctx) {
-  // Чередуем фон так, чтобы блок контактов (всегда без фона) шёл после «светлой» секции.
-  const alt = (ctx.total - index) % 2 === 1 && s.type !== 'cta' ? ' alt' : '';
-  const head =
-    s.type === 'cta'
-      ? ''
-      : `<div class="section-head reveal"><h2>${esc(s.title)}</h2>${s.subtitle ? `<p>${esc(s.subtitle)}</p>` : ''}</div>`;
-  let body = '';
-  switch (s.type) {
-    case 'features': body = renderFeatures(s); break;
-    case 'about': body = renderAbout(s); break;
-    case 'process': body = renderProcess(s); break;
-    case 'pricing': body = renderPricing(s, ctx.primaryCta); break;
-    case 'faq': body = renderFaq(s); break;
-    case 'cta': body = renderCta(s, ctx.primaryCta); break;
-  }
-  return `<section class="section s-${s.type}${alt}" id="${sectionId(s)}"><div class="container">${head}${body}</div></section>`;
-}
-
-// ───────────── Контакты ─────────────
-
-function renderContact(content, contact) {
-  const { labels } = content;
-  const rows = [];
-  if (contact.phone)
-    rows.push(
-      `<a href="${esc(telHref(contact.phone))}">${iconWrap('phone', 20)}<span><small>${esc(labels.phone)}</small><b>${esc(contact.phone)}</b></span></a>`,
-    );
-  if (contact.email)
-    rows.push(
-      `<a href="mailto:${esc(contact.email)}">${iconWrap('mail', 20)}<span><small>${esc(labels.email)}</small><b>${esc(contact.email)}</b></span></a>`,
-    );
-  if (contact.address)
-    rows.push(
-      `<div>${iconWrap('pin', 20)}<span><small>${esc(labels.address)}</small><b>${esc(contact.address)}</b></span></div>`,
-    );
-  if (contact.hours)
-    rows.push(
-      `<div>${iconWrap('clock', 20)}<span><small>${esc(labels.hours)}</small><b>${esc(contact.hours)}</b></span></div>`,
-    );
-
-  // У статичного сайта нет сервера для форм — поэтому форма открывает почтовый клиент (mailto).
-  const form = contact.email
-    ? `<form class="contact-form reveal" data-mailto="${esc(contact.email)}" data-subject="${esc(content.brand.name)}">
-        <label>${esc(labels.formName)}<input name="name" required maxlength="80" autocomplete="name"></label>
-        <label>${esc(labels.formMessage)}<textarea name="message" required maxlength="1500"></textarea></label>
-        <button class="btn btn-primary" type="submit">${esc(content.contact.buttonLabel)}</button>
-      </form>`
-    : contact.phone
-      ? `<div class="reveal"><a class="btn btn-primary" href="${esc(telHref(contact.phone))}">${icon('phone', 20)} ${esc(content.contact.buttonLabel)}</a></div>`
-      : '';
-
-  return `<section class="section" id="contact"><div class="container">
-    <div class="contact-grid${form ? '' : ' single'}">
-      <div class="reveal">
-        <h2>${esc(content.contact.title)}</h2>
-        ${content.contact.subtitle ? `<p class="muted" style="margin-top:14px;font-size:1.06rem">${esc(content.contact.subtitle)}</p>` : ''}
-        ${rows.length ? `<div class="contact-list">${rows.join('')}</div>` : ''}
-      </div>
-      ${form}
-    </div></div></section>`;
-}
-
-// ───────────── Клиентский скрипт страницы ─────────────
-
+// Скрипт страницы: меню, плавные якоря, появление блоков, форма (mailto).
 const PAGE_JS = `
-document.documentElement.classList.add('js');
 (function(){
-  var nav=document.querySelector('.nav');
-  var burger=document.querySelector('.burger');
-  if(burger)burger.addEventListener('click',function(){var o=nav.classList.toggle('open');burger.setAttribute('aria-expanded',o)});
-  document.querySelectorAll('a[href^="#"]').forEach(function(a){
-    a.addEventListener('click',function(e){
-      var id=a.getAttribute('href').slice(1);var el=id?document.getElementById(id):document.body;
-      if(!el)return;e.preventDefault();nav.classList.remove('open');
-      el.scrollIntoView({behavior:'smooth',block:'start'});
-    });
+  var d=document,h=d.documentElement;h.classList.add('js');
+  var burger=d.querySelector('.burger');
+  function menu(on){h.classList.toggle('menu-open',on);if(burger)burger.setAttribute('aria-expanded',on)}
+  if(burger)burger.addEventListener('click',function(){menu(!h.classList.contains('menu-open'))});
+  d.addEventListener('keydown',function(e){if(e.key==='Escape')menu(false)});
+  d.addEventListener('click',function(e){
+    var a=e.target.closest&&e.target.closest('a[href^="#"]');if(!a)return;
+    var id=a.getAttribute('href').slice(1);var el=id?d.getElementById(id):d.body;if(!el)return;
+    e.preventDefault();menu(false);el.scrollIntoView({behavior:'smooth',block:'start'});
   });
-  var items=document.querySelectorAll('.reveal');
+  var items=[].slice.call(d.querySelectorAll('.rv'));
+  function show(){items.forEach(function(el){el.classList.add('in')})}
   if('IntersectionObserver' in window){
-    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12});
-    items.forEach(function(el){io.observe(el)});
-    setTimeout(function(){items.forEach(function(el){el.classList.add('in')})},2500);
-  }else{items.forEach(function(el){el.classList.add('in')})}
-  document.querySelectorAll('form[data-mailto]').forEach(function(f){
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.08,rootMargin:'0px 0px -4% 0px'});
+    items.forEach(function(el){io.observe(el)});setTimeout(show,3500);
+  }else show();
+  [].forEach.call(d.querySelectorAll('form[data-mailto]'),function(f){
     f.addEventListener('submit',function(e){
-      e.preventDefault();
-      var d=new FormData(f);
-      var body=(d.get('message')||'')+'\\n\\n— '+(d.get('name')||'');
-      window.location.href='mailto:'+f.dataset.mailto+'?subject='+encodeURIComponent(f.dataset.subject||'')+'&body='+encodeURIComponent(body);
+      e.preventDefault();var fd=new FormData(f);
+      var body=(fd.get('message')||'')+'\\n\\n— '+(fd.get('name')||'');
+      location.href='mailto:'+f.dataset.mailto+'?subject='+encodeURIComponent(f.dataset.subject||'')+'&body='+encodeURIComponent(body);
     });
   });
 })();
 `;
 
-// ───────────── Страница целиком ─────────────
+// Скрипт только для предпросмотра внутри редактора: обновление стилей без перезагрузки,
+// запоминание прокрутки и «клик по блоку = открыть его настройки».
+const PREVIEW_JS = `
+(function(){
+  var d=document,h=d.documentElement,last=0;
+  addEventListener('scroll',function(){var n=Date.now();if(n-last>120){last=n;parent.postMessage({ws:'scroll',y:scrollY},'*')}},{passive:true});
+  addEventListener('message',function(e){
+    var m=e.data;if(!m||!m.ws)return;
+    if(m.ws==='scrollTo'){h.style.scrollBehavior='auto';scrollTo(0,m.y);h.style.scrollBehavior=''}
+    if(m.ws==='tokens'){
+      var s=d.getElementById('ws-tokens');if(s)s.textContent=m.css;
+      Object.keys(m.attrs||{}).forEach(function(k){h.setAttribute(k,m.attrs[k])});
+    }
+    if(m.ws==='focus'){var el=d.querySelector('[data-sec="'+m.sec+'"]');if(el)el.scrollIntoView({behavior:'smooth',block:'start'})}
+  });
+  d.addEventListener('click',function(e){
+    var a=e.target.closest&&e.target.closest('a');
+    if(a&&!/^#/.test(a.getAttribute('href')||''))e.preventDefault();
+    var s=e.target.closest&&e.target.closest('[data-sec]');
+    if(s)parent.postMessage({ws:'select',sec:s.getAttribute('data-sec')},'*');
+  },true);
+  d.addEventListener('submit',function(e){e.preventDefault()},true);
+  function showAll(){[].forEach.call(d.querySelectorAll('.rv'),function(e){e.classList.add('in')})}showAll();setTimeout(showAll,200);
+  var st=d.createElement('style');st.textContent='[data-sec]{cursor:pointer;outline:2px solid transparent;outline-offset:-2px;transition:outline-color .15s}[data-sec]:hover{outline-color:rgba(80,120,255,.55)}';d.head.appendChild(st);
+  parent.postMessage({ws:'ready'},'*');
+})();
+`;
+
+function visibleSections(content) {
+  return content.sections.filter((s) => {
+    if (s.hidden) return false;
+    if (s.type === 'cta' || s.type === 'manifesto') return true;
+    if (s.type === 'gallery') return true;
+    if (s.type === 'about') return !!(s.text || s.items.length);
+    return s.items.length > 0;
+  });
+}
+
+function faviconHref(site, res) {
+  if (site.media.logo) return site.media.logo;
+  const name = plain(site.content.brand.name).trim();
+  const initial = ([...name][0] ?? '•').toUpperCase();
+  const bg = res.tokens.accent;
+  const rx = Math.min(14, parseInt(res.vars['--radius'], 10) || 0);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="${rx}" fill="${bg}"/><text x="16" y="23" font-size="20" font-weight="700" text-anchor="middle" font-family="system-ui,sans-serif" fill="${onColor(bg)}">${esc(initial)}</text></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
 
 /**
- * @param {object} site
- * @param {object} site.content  нормализованный контент (см. schema.js)
- * @param {object} [site.contact] контакты клиента: phone, email, address, hours
- * @param {string} [site.themeId]
- * @param {string} [site.accent]  переопределение основного цвета
+ * @param {object} siteIn  запись сайта (content, design, media, contact)
+ * @param {object} [opts]
+ * @param {boolean} [opts.preview]   добавить скрипт редактора
+ * @param {boolean} [opts.inline]    встроить шрифты в base64 (для скачивания)
  */
-export function renderSite({ content, contact = {}, themeId = DEFAULT_THEME, accent } = {}) {
-  const theme = THEMES[themeId] ?? THEMES[DEFAULT_THEME];
-  const brand = content.brand;
-  // Если клиент сам выбрал цвет, второй цвет градиента выводим из него (rootVars сдвигает оттенок),
-  // иначе пара «цвет от клиента + цвет от ИИ» выглядела бы случайной.
-  const accentOverride = validHex(accent, '');
-  const accentColor = accentOverride || brand.accent;
-  const accent2Color = accentOverride ? '' : brand.accent2;
-  const primaryCta = content.hero.primaryCta;
-  const sections = content.sections;
-  const navItems = sections.filter((s) => s.type !== 'cta').slice(0, 4);
-  const firstId = navItems[0] ? sectionId(navItems[0]) : 'contact';
-  const year = new Date().getFullYear();
-  const initial = [...(brand.name.trim() || '•')][0].toUpperCase();
+export function renderSite(siteIn, { preview = false, inline = false } = {}) {
+  const site = normalizeSite(siteIn);
+  const res = resolveDesign(site);
+  const c = site.content;
+  const brandName = plain(c.brand.name).trim();
 
-  const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="${accentColor}"/><text x="16" y="22.5" font-size="19" font-weight="700" text-anchor="middle" font-family="system-ui,sans-serif" fill="${onColor(accentColor)}">${esc(initial)}</text></svg>`;
-  const favicon = `data:image/svg+xml,${encodeURIComponent(faviconSvg)}`;
+  const sections = visibleSections(c);
+  const counted = sections.filter((s) => !NAV_SKIP.has(s.type));
+  const navSections = counted.filter((s) => s.type !== 'gallery').slice(0, 4);
+  const navItems = [
+    ...navSections.map((s) => ({ href: `#s-${s.type}`, label: plain(s.navLabel || s.title) })),
+    { href: '#contact', label: plain(c.contact.navLabel) },
+  ];
 
-  const nav = `<header class="nav"><div class="container nav-inner">
-    <a class="brand" href="#top"><span class="brand-mark">${esc(initial)}</span><span>${esc(brand.name)}</span></a>
-    <nav class="links" aria-label="${esc(content.labels.menu)}">${navItems
-      .map((s) => `<a href="#${sectionId(s)}">${esc(s.navLabel)}</a>`)
-      .join('')}<a href="#contact">${esc(content.contact.navLabel)}</a></nav>
-    <a class="btn btn-primary nav-cta" href="#contact">${esc(primaryCta)}</a>
-    <button class="burger" type="button" aria-label="${esc(content.labels.menu)}" aria-expanded="false">${icon('menu', 22)}</button>
-  </div></header>`;
+  // Чередующиеся фоны: считаем от конца, чтобы блок перед контактами был «залит»
+  const altSet = new Set();
+  counted.forEach((s, k) => {
+    if ((counted.length - k) % 2 === 1) altSet.add(sections.indexOf(s));
+  });
 
-  const hero = `<section class="hero" id="top" data-layout="${theme.layout}"><div class="container hero-inner">
-    <div class="hero-copy">
-      ${content.hero.eyebrow ? `<span class="eyebrow">${esc(content.hero.eyebrow)}</span>` : ''}
-      <h1>${esc(content.hero.headline)}</h1>
-      <p class="lead">${esc(content.hero.subheadline)}</p>
-      <div class="hero-actions">
-        <a class="btn btn-primary" href="#contact">${esc(primaryCta)}</a>
-        ${content.hero.secondaryCta ? `<a class="btn btn-ghost" href="#${firstId}">${esc(content.hero.secondaryCta)}</a>` : ''}
-      </div>
-    </div>
-    ${
-      content.hero.highlights.length
-        ? `<div class="hero-visual">${content.hero.highlights
-            .map(
-              (h) =>
-                `<div class="hl">${iconWrap(h.icon, 22)}<div><strong>${esc(h.title)}</strong>${
-                  h.text ? `<span class="t">${esc(h.text)}</span>` : ''
-                }</div></div>`,
-            )
-            .join('')}</div>`
-        : ''
-    }
-  </div></section>`;
+  const r = {
+    c, site, res,
+    contact: site.contact,
+    media: site.media,
+    art: res.art,
+    seed: site.id || brandName,
+    initial: [...brandName][0] ?? 'A',
+    year: new Date().getFullYear(),
+    navItems,
+    altSet,
+    sectionCount: counted.length,
+    firstSectionId: counted[0] ? `s-${counted[0].type}` : 'contact',
+    ctaHref: ctaHref(site.contact),
+    isLayout,
+  };
 
-  const body = sections.map((s, i) => renderSection(s, i, { primaryCta, total: sections.length })).join('\n');
+  let n = 0;
+  const body = sections
+    .map((s, i) => {
+      const num = NAV_SKIP.has(s.type) ? 0 : n++;
+      return renderSection(r, s, i, num);
+    })
+    .join('\n');
 
-  const css = `${rootVars(theme, accentColor, accent2Color)}${BASE_CSS}${theme.css}`;
+  // CSS: база + стили использованных вариантов + «изюминки» шаблона
+  const used = new Set(['hero:common', 'contact:common', `hero:${res.layouts.hero}`, `contact:${res.layouts.contact}`]);
+  for (const s of sections) {
+    const lay = s.layout && isLayout(s.type, s.layout) ? s.layout : res.layouts[s.type];
+    used.add(`${s.type}:${lay}`);
+    if (s.type === 'about') used.add('about:common');
+  }
+  const css = baseCss + [...used].map((k) => variantCss[k] ?? '').join('') + (res.tpl.css ?? '');
+
+  const attrs = Object.entries(res.attrs).map(([k, v]) => `${k}="${esc(v)}"`).join(' ');
+  const desc = esc(c.seo.description);
+  const title = esc(plain(c.seo.title || brandName));
 
   return `<!doctype html>
-<html lang="${esc(brand.language)}" data-theme="${esc(theme.id)}">
+<html lang="${esc(c.brand.language)}" ${attrs}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(content.seo.title || brand.name)}</title>
-<meta name="description" content="${esc(content.seo.description)}">
-<meta name="theme-color" content="${esc(accentColor)}">
-<link rel="icon" href="${favicon}">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="${esc(fontLink(theme))}">
-<style>${css}</style>
+<title>${title}</title>
+<meta name="description" content="${desc}">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="${desc}">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="${esc(res.tokens.bg)}">
+<link rel="icon" href="${esc(faviconHref(site, res))}">
+<style id="ws-tokens">${tokensCss(res, { fontMode: inline ? 'inline' : 'link' })}</style>
+<style id="ws-css">${css}</style>
 </head>
 <body>
-${nav}
+${renderNav(r)}
+${renderMenu(r)}
 <main>
-${hero}
+${renderHero(r)}
+${renderTicker(r)}
 ${body}
-${renderContact(content, contact)}
+${renderContact(r)}
 </main>
-<footer class="footer"><div class="container footer-inner">
-  <strong>${esc(brand.name)}</strong>
-  <span class="muted">© ${year} ${esc(brand.name)}. ${esc(content.labels.rights)}</span>
-</div></footer>
-<script>${PAGE_JS}</script>
+${renderFooter(r)}
+<script>${PAGE_JS}${preview ? PREVIEW_JS : ''}</script>
 </body>
 </html>`;
+}
+
+/** Только токены (CSS-переменные + атрибуты <html>) — для мгновенного обновления предпросмотра. */
+export function renderTokens(siteIn) {
+  const site = normalizeSite(siteIn);
+  const res = resolveDesign(site);
+  return { css: tokensCss(res), attrs: res.attrs, tokens: res.tokens };
 }

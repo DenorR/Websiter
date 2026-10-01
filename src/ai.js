@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { SiteContent, normalizeContent } from './schema.js';
 import { mockGenerate } from './mock.js';
-import { THEMES } from './render/themes.js';
+import { TEMPLATES } from './templates/index.js';
 
 /** Ошибка с текстом, который можно безопасно показать клиенту. */
 export class AiError extends Error {
@@ -29,6 +29,10 @@ const TONE_TEXT = {
 
 const LANG_NAMES = { ru: 'Russian', en: 'English', uk: 'Ukrainian', de: 'German', es: 'Spanish', fr: 'French' };
 
+const TEMPLATE_CATALOG = Object.values(TEMPLATES)
+  .map((t) => `  - ${t.id}: ${t.name} — ${t.tagline}. Best for: ${t.best}.`)
+  .join('\n');
+
 const SYSTEM_PROMPT = `You are a senior brand strategist and conversion copywriter who builds one-page websites for small businesses.
 A client describes their business. You (1) analyse it and (2) write the full content of their website: structure, copy and brand colours. A separate template engine turns your JSON into the final page, so you only produce content — never HTML.
 
@@ -44,11 +48,20 @@ A client describes their business. You (1) analyse it and (2) write the full con
 - "brand.language" is the ISO 639-1 code of the site language. "labels" are in the site language.
 
 ## Structure and copy
-- Pick 4–6 sections from: about, features, process, pricing, faq, cta. Order them for the client's goal (e.g. sales: features → process → about → faq → cta; information: about → features → process → faq → cta). Each type at most once. Always end with a "cta" section. The contact block is added automatically.
+- Pick 4–7 sections from: about, features, process, pricing, faq, cta, manifesto. Order them for the client's goal (e.g. sales: features → process → about → faq → cta; information: about → features → manifesto → process → faq → cta). Each type at most once. Always end with a "cta" section. The contact block is added automatically.
+- "manifesto" is ONE bold sentence expressing the belief behind the business (max 20 words, no list items). Use it when it adds punch; never invent facts in it.
 - Hero: the headline states a benefit for the visitor (max 12 words), not just the company name. Exactly 3 highlights.
 - Features: 3–6 concrete services or benefits drawn from the description. Process: 3–4 steps. FAQ: 4–5 questions real customers ask. About: 1–3 short paragraphs plus 3–4 short facts as items.
 - Be specific and concrete; short sentences; no filler clichés, no lorem ipsum, no emojis, no exclamation-mark spam. Match the requested tone.
 - Choose a fitting icon for every item.
+
+## Typographic details
+- In hero.headline, section titles, cta and contact titles wrap 1–3 key words in single asterisks to emphasise them: "Хлеб, который *пахнет* утром". Use it once per title at most, never around the whole title, and not in items or body text.
+- hero.keywords: 5–8 short words or two-word phrases (services or topics from the description) that run as a ticker under the hero.
+
+## Design recommendation
+- recommendedTemplates: 2–3 ids from this catalogue, best match first. Pick by the business type and audience, not at random.
+${TEMPLATE_CATALOG}
 
 ## Colours
 - "accent" is the main brand colour: pick it from the niche and its psychology (not always blue). Saturated, mid-to-dark so white text reads on it. "accent2" is a harmonious neighbour for gradients. Keep both compatible with the chosen visual design.
@@ -153,8 +166,8 @@ function createAiGenerator({ apiKey, model, effort }) {
     mode: 'ai',
     model,
 
-    async generate({ input, themeId, onProgress, signal }) {
-      const theme = THEMES[themeId];
+    async generate({ input, templateId, onProgress, signal }) {
+      const theme = TEMPLATES[templateId];
       return run({
         input,
         onProgress,
@@ -163,8 +176,8 @@ function createAiGenerator({ apiKey, model, effort }) {
       });
     },
 
-    async revise({ input, themeId, content, instruction, onProgress, signal }) {
-      const theme = THEMES[themeId];
+    async revise({ input, templateId, content, instruction, onProgress, signal }) {
+      const theme = TEMPLATES[templateId];
       return run({
         input,
         onProgress,

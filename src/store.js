@@ -4,20 +4,24 @@ import crypto from 'node:crypto';
 
 const ID_RE = /^[a-f0-9]{20}$/;
 
-/** Простое файловое хранилище: один JSON-файл на сайт. */
+/** Простое файловое хранилище: один JSON-файл на сайт + папка с его загрузками. */
 export function createStore(dataDir) {
   const dir = path.join(dataDir, 'sites');
+  const uploadsRoot = path.join(dataDir, 'uploads');
   fs.mkdirSync(dir, { recursive: true });
+  fs.mkdirSync(uploadsRoot, { recursive: true });
 
   const file = (id) => path.join(dir, `${id}.json`);
 
   return {
     isValidId: (id) => typeof id === 'string' && ID_RE.test(id),
+    uploadsRoot,
+    uploadsDir: (id) => path.join(uploadsRoot, id),
 
     create(record) {
       const id = crypto.randomBytes(10).toString('hex');
       const now = new Date().toISOString();
-      const site = { revisions: 0, ...record, id, createdAt: now, updatedAt: now };
+      const site = { revisions: 0, uploads: [], ...record, id, createdAt: now, updatedAt: now };
       this.save(site);
       return site;
     },

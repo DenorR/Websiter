@@ -96,3 +96,21 @@ export function sendTextStream(res, text, { stopReason = 'end_turn', chunks = 6 
   send('message_stop', { type: 'message_stop' });
   res.end();
 }
+
+// Минимальный валидный PNG 1×1 (для проверки загрузок)
+export const PNG_1X1 = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+export const patch = (url, body) =>
+  fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+/** Создаёт сайт через API и возвращает его (с id) */
+export async function createSite(app, { templateId = 'swiss', business = VALID_INPUT, design } = {}) {
+  const res = await post(`${app.url}/api/generate`, { templateId, business, design });
+  const events = await readSse(res);
+  const last = events.at(-1);
+  if (last?.event !== 'done') throw new Error(`генерация не удалась: ${JSON.stringify(last)}`);
+  return last.data.site;
+}
